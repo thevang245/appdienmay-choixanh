@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/view/search%20/search.dart';
+import 'package:flutter_application_1/view/search/search_page.dart';
 
 class SearchAppBar extends StatelessWidget implements PreferredSizeWidget {
   const SearchAppBar({super.key});
@@ -47,9 +47,10 @@ class SearchAppBar extends StatelessWidget implements PreferredSizeWidget {
               borderRadius: BorderRadius.circular(20),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            child:  TextField(
+            child: TextField(
               onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => SearchcreenPage()));
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => SearchcreenPage()));
               },
               decoration: InputDecoration(
                 hintText: 'Tìm kiếm sản phẩm...',

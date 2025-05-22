@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/models/category_model.dart';
 import 'package:flutter_application_1/services/api_service.dart';
+import 'package:flutter_application_1/view/components/comment_card.dart';
 import 'package:flutter_application_1/view/components/product_card.dart';
 import 'package:flutter_application_1/view/contact/contact.dart';
 import 'package:flutter_application_1/view/detail/detail_page.dart';
@@ -13,6 +14,7 @@ import 'package:flutter_application_1/widgets/input_widget.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:html/parser.dart' show parse;
 
 class HomePage extends StatefulWidget {
   final ValueNotifier<int> categoryNotifier;
@@ -27,19 +29,17 @@ class HomePage extends StatefulWidget {
 class HomePageState extends State<HomePage> {
   int _categoryId = 0;
   List<dynamic> products = [];
+  List<dynamic> commentCart = [];
   bool isLoading = true;
-  late final VoidCallback _listener;
 
-  // Lấy danh mục từ DanhMucDrawer một lần duy nhất
-  late final Map<String, dynamic> danhMucData;
+  late VoidCallback _listener;
+  late Map<String, dynamic> danhMucData;
 
   @override
   void initState() {
     super.initState();
-    loadLoginStatus();
-    danhMucData = DanhMucDrawer(onCategorySelected: (_) {}).danhMucData;
     _categoryId = widget.categoryNotifier.value;
-    fetchProducts();
+    danhMucData = getDanhMucData();
 
     _listener = () {
       if (!mounted) return;
@@ -49,27 +49,56 @@ class HomePageState extends State<HomePage> {
       });
       fetchProducts();
     };
+
     widget.categoryNotifier.addListener(_listener);
+    loadLoginStatus();
+    loadComments();
+    fetchProducts();
+  }
+
+  @override
+  void dispose() {
+    widget.categoryNotifier.removeListener(_listener);
+    super.dispose();
+  }
+
+  Map<String, dynamic> getDanhMucData() {
+    return DanhMucDrawer(onCategorySelected: (_) {}).danhMucData;
   }
 
   Future<void> loadLoginStatus() async {
     final prefs = await SharedPreferences.getInstance();
-    String user = prefs.getString('userid') ?? '';
     setState(() {
-      Global.userId = user;
+      Global.userId = prefs.getString('userid') ?? '';
     });
+  }
+
+  Future<void> loadComments() async {
+    try {
+      final response = await APIService.loadComments();
+      if (mounted) {
+        setState(() {
+          commentCart = response.isNotEmpty && response[0]['data'] != null
+              ? response[0]['data']
+              : [];
+        });
+      }
+      print('Số comment sau khi load: ${commentCart.length}');
+    } catch (e) {
+      print('Lỗi khi load comment: $e');
+    }
   }
 
   Future<void> fetchProducts() async {
     if (!mounted) return;
-    setState(() {
-      isLoading = true;
-    });
+
+    setState(() => isLoading = true);
 
     try {
       List<dynamic> allProducts = [];
 
       if (_categoryId == 0) {
+        // Danh mục gốc: load theo nhóm cha
         final danhMucChaIds = [
           35279,
           35278,
@@ -78,7 +107,8 @@ class HomePageState extends State<HomePage> {
           35004,
           35139,
           35149,
-          35028
+          35028,
+          35281
         ];
 
         for (int id in danhMucChaIds) {
@@ -91,7 +121,6 @@ class HomePageState extends State<HomePage> {
             extention: modules[2],
             categoryId: id,
           );
-
           allProducts.addAll(fetched);
         }
       } else {
@@ -117,37 +146,32 @@ class HomePageState extends State<HomePage> {
       setState(() {
         products = allProducts;
         isLoading = false;
-        hasValidImage(products);
       });
     } catch (e) {
       if (mounted) {
-        setState(() {
-          isLoading = false;
-        });
+        setState(() => isLoading = false);
       }
     }
   }
 
   String findCategoryNameById(Map<String, dynamic> data, int id) {
     for (var entry in data.entries) {
-      final key = entry.key;
       final value = entry.value;
-
-      if (value is int) {
-        if (value == id) {
-          return key;
-        }
-      } else if (value is Map) {
-        if (value['id'] == id) {
-          return key;
-        }
+      if (value is int && value == id) return entry.key;
+      if (value is Map) {
+        if (value['id'] == id) return entry.key;
         if (value.containsKey('children')) {
-          final nameInChildren = findCategoryNameById(value['children'], id);
-          if (nameInChildren.isNotEmpty) return nameInChildren;
+          final name = findCategoryNameById(value['children'], id);
+          if (name.isNotEmpty) return name;
         }
       }
     }
     return '';
+  }
+
+  String parseHtmlString(String htmlString) {
+    final document = parse(htmlString);
+    return parse(document.body?.text).documentElement?.text ?? '';
   }
 
   @override
@@ -159,7 +183,6 @@ class HomePageState extends State<HomePage> {
       );
     }
 
-    // Trường hợp không có dữ liệu
     if (products.isEmpty && _categoryId != 35028) {
       return Scaffold(
         backgroundColor: Colors.grey[100],
@@ -172,14 +195,13 @@ class HomePageState extends State<HomePage> {
       );
     }
 
-    // 👉 THÊM: Trường hợp categoryId = 3 thì hiển thị form
     if (_categoryId == 35028) {
       return ContactForm();
     }
 
-    // Trường hợp categoryId = 0: nhóm sản phẩm theo danh mục
+    // Trường hợp categoryId = 0: nhóm danh mục
     if (_categoryId == 0) {
-      Map<int, List<dynamic>> groupedByCategory = {};
+      final Map<int, List<dynamic>> groupedByCategory = {};
       for (var product in products) {
         int catId = product['categoryId'] ?? 0;
         groupedByCategory.putIfAbsent(catId, () => []).add(product);
@@ -187,64 +209,121 @@ class HomePageState extends State<HomePage> {
 
       return Scaffold(
         backgroundColor: Colors.grey[100],
-        body: Padding(
+        body: ListView(
           padding: const EdgeInsets.all(8.0),
-          child: ListView(
-            children: groupedByCategory.entries.map((entry) {
-              final categoryId = entry.key;
-              final productList = entry.value.where((product) {
-                if (categoryId == 35004) return true;
-                return hasValidImage(product);
-              }).toList();
+          children: groupedByCategory.entries.map((entry) {
+            final categoryId = entry.key;
+            final productList = entry.value.where((p) {
+              return categoryId == 35004 || hasValidImage(p);
+            }).toList();
+            final categoryName = findCategoryNameById(danhMucData, categoryId);
 
-              if (productList.isEmpty) return SizedBox.shrink();
-
-              final categoryName =
-                  findCategoryNameById(danhMucData, categoryId);
-
+            if (categoryId == 35281) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(height: 12),
                   Text(
-                    categoryName.isNotEmpty
-                        ? categoryName
-                        : 'Danh mục $categoryId',
+                    'Khách hàng nói gì?',
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: Colors.blue[800],
                     ),
                   ),
-                  SizedBox(height: 8),
-                  MasonryGridView.count(
-                    shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 4,
-                    crossAxisSpacing: 4,
-                    itemCount: productList.length,
-                    itemBuilder: (context, index) {
-                      final product = productList[index];
-                      return ProductCard(
-                        product: product,
-                        categoryId: categoryId,
-                        onTap: () => widget.onProductTap(product),
-                      );
-                    },
+                  SizedBox(height: 12),
+                  SizedBox(
+                    height: 200,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: commentCart.length,
+                      itemBuilder: (context, index) {
+                        final comment = commentCart[index];
+                        return CommentCard(
+                          name: comment['tieude'] ?? '',
+                          content:
+                              parseHtmlString(comment['noidungtomtat'] ?? ''),
+                        );
+                      },
+                    ),
                   ),
+                  if (productList.isNotEmpty) ...[
+                    SizedBox(height: 16),
+                    Text(
+                      categoryName.isNotEmpty
+                          ? categoryName
+                          : 'Danh mục $categoryId',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue[800],
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    MasonryGridView.count(
+                      shrinkWrap: true,
+                      physics: NeverScrollableScrollPhysics(),
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 4,
+                      crossAxisSpacing: 4,
+                      itemCount: productList.length,
+                      itemBuilder: (context, index) {
+                        final product = productList[index];
+                        return ProductCard(
+                          product: product,
+                          categoryId: categoryId,
+                          onTap: () => widget.onProductTap(product),
+                        );
+                      },
+                    ),
+                  ]
                 ],
               );
-            }).toList(),
-          ),
+            }
+
+            if (productList.isEmpty) return SizedBox.shrink();
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: 12),
+                Text(
+                  categoryName.isNotEmpty
+                      ? categoryName
+                      : 'Danh mục $categoryId',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue[800],
+                  ),
+                ),
+                SizedBox(height: 8),
+                MasonryGridView.count(
+                  shrinkWrap: true,
+                  physics: NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 4,
+                  crossAxisSpacing: 4,
+                  itemCount: productList.length,
+                  itemBuilder: (context, index) {
+                    final product = productList[index];
+                    return ProductCard(
+                      product: product,
+                      categoryId: categoryId,
+                      onTap: () => widget.onProductTap(product),
+                    );
+                  },
+                ),
+              ],
+            );
+          }).toList(),
         ),
       );
     }
 
-    // Trường hợp các category khác
+    // Các category khác (chỉ hiển thị sản phẩm)
     final visibleProducts = products.where((product) {
-      if (_categoryId == 35004) return true;
-      return hasValidImage(product);
+      return _categoryId == 35004 || hasValidImage(product);
     }).toList();
 
     return Scaffold(

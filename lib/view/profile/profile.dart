@@ -40,8 +40,8 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
-      body: Padding(
-        padding: const EdgeInsets.only(top: 50),
+      body: SafeArea(
+
         child: Column(
           children: [
             Card(

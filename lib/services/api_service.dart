@@ -41,16 +41,13 @@ class APIService {
       if (response.statusCode == 200) {
         final decoded = json.decode(response.body);
 
-        print('Phản hồi API: $decoded');
-
-        // Kiểm tra cấu trúc dữ liệu
+        /// ✅ Trường hợp phản hồi là List và có phần tử đầu tiên là Map chứa key "data"
         if (decoded is List && decoded.isNotEmpty) {
-          final firstElement = decoded[0];
-          if (firstElement is Map && firstElement.containsKey('data')) {
-            final List<dynamic> productList = firstElement['data'];
-            return productList;
+          final first = decoded[0];
+          if (first is Map && first.containsKey('data')) {
+            return first['data'];
           } else {
-            print('Không tìm thấy key "data" trong phản hồi: $firstElement');
+            print('Không tìm thấy key "data" trong phần tử đầu tiên.');
             return [];
           }
         } else {
@@ -63,6 +60,43 @@ class APIService {
       }
     } catch (e) {
       print('Lỗi kết nối hoặc xử lý API: $e');
+      return [];
+    }
+  }
+
+  static Future<List<dynamic>> loadComments() async {
+    final uri = Uri.parse('$baseUrl/ww2/module.tintuc.asp').replace(
+      queryParameters: {
+        'id': '35281',
+      },
+    );
+
+    print('Link comment: $uri');
+    try {
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body);
+
+        print('Phản hồi JSON gốc: ${response.body}');
+
+        if (decoded is List && decoded.isNotEmpty) {
+          final first = decoded[0];
+          if (first is Map && first.containsKey('data')) {
+            final dataList = first['data'];
+            if (dataList is List) {
+              print('Số comment nhận được: ${dataList.length}');
+              return dataList;
+            }
+          }
+        }
+        return [];
+      } else {
+        print('Lỗi server khi tải comment: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      print('Lỗi khi gọi API loadComments: $e');
       return [];
     }
   }
@@ -319,7 +353,6 @@ class APIService {
 
   static Future<List<dynamic>> fetchBoLocChiTiet(String id) async {
     final url = Uri.parse('$baseUrl/ww2/crm.boloc.chitiet.asp?id=$id');
-    print('urlbolocchitiet: $url');
 
     final response = await http.get(url, headers: {
       'Accept': 'application/json',

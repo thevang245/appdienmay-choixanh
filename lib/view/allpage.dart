@@ -173,7 +173,8 @@ class _PageAllState extends State<PageAll> {
         body: Stack(
           children: [
             Padding(
-              padding: const EdgeInsets.only(top: kToolbarHeight, bottom: 82),
+              padding: EdgeInsets.only(top: kToolbarHeight,
+              bottom:kBottomNavigationBarHeight + MediaQuery.of(context).padding.bottom, ),
               child: IndexedStack(
                 index: _getPageIndex(),
                 children: [
@@ -197,9 +198,18 @@ class _PageAllState extends State<PageAll> {
               bottom: 0,
               left: 0,
               right: 0,
-              child: CustomBottomNavBar(
-                currentIndex: _currentIndex,
-                onTap: _onTabTapped,
+              child: SafeArea(
+                top: false,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    
+                  ),
+                  child: CustomBottomNavBar(
+                    currentIndex: _currentIndex,
+                    onTap: _onTabTapped,
+                  ),
+                ),
               ),
             ),
           ],

@@ -83,8 +83,7 @@ class PageCartState extends State<PageCart> {
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
-      body: Padding(
-        padding: const EdgeInsets.only(top:50),
+      body: SafeArea(
         child: Stack(
           children: [
             Column(

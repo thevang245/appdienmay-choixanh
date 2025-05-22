@@ -54,11 +54,13 @@ class _LoginState extends State<Login> {
                     label: 'Nhập số điện thoại hoặc email',
                     icon: Icons.person,
                     controller: _username,
+                    maxline: 1,
                   ),
                   const SizedBox(height: 10),
                   FormLabel('Mật khẩu'),
                   const SizedBox(height: 6),
                   CustomTextField(
+                    maxline: 1,
                     label: 'Nhập mật khẩu',
                     icon: Icons.key,
                     isPassword: true,

@@ -22,6 +22,7 @@ class CustomTextField extends StatefulWidget {
 
 class _CustomTextFieldState extends State<CustomTextField> {
   bool _obscureText = true;
+  
 
   @override
   void initState() {
@@ -31,6 +32,8 @@ class _CustomTextFieldState extends State<CustomTextField> {
 
   @override
   Widget build(BuildContext context) {
+     final widthScreen = MediaQuery.of(context).size.width;
+     double fontSize = widthScreen * 0.036;
     return Container(
       padding: EdgeInsets.all(2),
       decoration: BoxDecoration(
@@ -43,7 +46,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
         controller: widget.controller,
         decoration: InputDecoration(
           hintText: widget.label,
-          hintStyle: const TextStyle(color: Colors.black54),
+          hintStyle: TextStyle(color: Colors.black54, fontSize: fontSize),
           labelStyle: const TextStyle(color: Colors.black54),
           prefixIcon: widget.icon != null
               ? Icon(widget.icon, color: Colors.black54)

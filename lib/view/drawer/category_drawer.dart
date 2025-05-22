@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/widgets/widget_auth.dart';
 
 class DanhMucDrawer extends StatelessWidget {
   final void Function(int) onCategorySelected;
@@ -20,27 +21,26 @@ class DanhMucDrawer extends StatelessWidget {
   }
 
   String findCategoryNameById(Map<String, dynamic> data, int id) {
-  for (var entry in data.entries) {
-    final key = entry.key;
-    final value = entry.value;
+    for (var entry in data.entries) {
+      final key = entry.key;
+      final value = entry.value;
 
-    if (value is int) {
-      if (value == id) {
-        return key;
-      }
-    } else if (value is Map) {
-      if (value['id'] == id) {
-        return key;
-      }
-      if (value.containsKey('children')) {
-        final nameInChildren = findCategoryNameById(value['children'], id);
-        if (nameInChildren.isNotEmpty) return nameInChildren;
+      if (value is int) {
+        if (value == id) {
+          return key;
+        }
+      } else if (value is Map) {
+        if (value['id'] == id) {
+          return key;
+        }
+        if (value.containsKey('children')) {
+          final nameInChildren = findCategoryNameById(value['children'], id);
+          if (nameInChildren.isNotEmpty) return nameInChildren;
+        }
       }
     }
+    return '';
   }
-  return '';
-}
-
 
   final Map<String, dynamic> danhMucData = {
     'Trang chủ': 0,
@@ -71,7 +71,8 @@ class DanhMucDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    double statusBarHeight = MediaQuery.of(context).padding.top;
+    final double appBarHeight =
+        kToolbarHeight + MediaQuery.of(context).padding.top;
 
     return Drawer(
       child: SafeArea(
@@ -79,8 +80,43 @@ class DanhMucDrawer extends StatelessWidget {
         child: Column(
           children: [
             Container(
-              height: 82,
+              height: appBarHeight,
+              width: double.infinity,
               color: Color(0xFF198754),
+              child: Stack(
+                children: [
+                  Center(
+                    child: Image.network(
+                      'https://choixanh.vn/mediaroot/media/userfiles/useruploads/1/image/he-thong/logo-10.png',
+                      color: Colors.white,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 8,
+                    right: 8,
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context); // Đóng Drawer
+                      },
+                      child: Row(
+                        children: [
+                          Icon(Icons.close, color: Colors.white70, size: 18),
+                          SizedBox(width: 2),
+                          Text(
+                            'Đóng',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
             Expanded(
               child: ListView(

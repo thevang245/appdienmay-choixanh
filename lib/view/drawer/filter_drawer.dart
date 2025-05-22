@@ -38,18 +38,17 @@ class _BoLocDrawerState extends State<BoLocDrawer> {
 
   @override
   Widget build(BuildContext context) {
+    final double appBarHeight =
+        kToolbarHeight + MediaQuery.of(context).padding.top;
     return Drawer(
       backgroundColor: Colors.white,
       child: Column(
         children: [
           Container(
-            height: 94,
+            height: appBarHeight,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  Color(0xFF198754),
-                  Color(0xFF198754)
-                ],
+                colors: [Color(0xFF198754), Color(0xFF198754)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -98,6 +97,7 @@ class _BoLocDrawerState extends State<BoLocDrawer> {
                 } else {
                   final filters = snapshot.data!;
                   return ListView.builder(
+                    padding: EdgeInsets.only(top: 10),
                     itemCount: filters.length,
                     itemBuilder: (context, index) {
                       final filter = filters[index];
@@ -105,8 +105,7 @@ class _BoLocDrawerState extends State<BoLocDrawer> {
                       final children = filter['children'] ?? [];
 
                       return Padding(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 10, horizontal: 16),
+                        padding: EdgeInsets.fromLTRB(16, index == 0 ? 0 : 10, 16, 10),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [

@@ -12,50 +12,46 @@ class CustomBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 82,
-      color: Colors.white,
-      child: BottomNavigationBar(
-        backgroundColor:
-            Colors.transparent, // làm nền trong suốt để thấy gradient
-        elevation: 0, // bỏ shadow
-        currentIndex: currentIndex,
-        onTap: onTap,
-        selectedItemColor: Color(0xff0066FFF),
-        unselectedItemColor: Colors.black54,
-        selectedLabelStyle: TextStyle(fontWeight: FontWeight.w700),
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
-            icon: ImageIcon(
-              AssetImage('asset/home.png'),
-              size: 24,
-            ),
-            label: 'Trang chủ',
+    return BottomNavigationBar(
+      backgroundColor:
+          Colors.transparent, // làm nền trong suốt để thấy gradient
+      elevation: 0, // bỏ shadow
+      currentIndex: currentIndex,
+      onTap: onTap,
+      selectedItemColor: Color(0xff0066FFF),
+      unselectedItemColor: Colors.black54,
+      selectedLabelStyle: TextStyle(fontWeight: FontWeight.w700),
+      type: BottomNavigationBarType.fixed,
+      items: const [
+        BottomNavigationBarItem(
+          icon: ImageIcon(
+            AssetImage('asset/home.png'),
+            size: 24,
           ),
-          BottomNavigationBarItem(
-            icon: ImageIcon(
-              AssetImage('asset/favourite.png'),
-              size: 24,
-            ),
-            label: 'Yêu thích',
+          label: 'Trang chủ',
+        ),
+        BottomNavigationBarItem(
+          icon: ImageIcon(
+            AssetImage('asset/favourite.png'),
+            size: 24,
           ),
-          BottomNavigationBarItem(
-            icon: ImageIcon(
-              AssetImage('asset/shopping-cart.png'),
-              size: 24,
-            ),
-            label: 'Giỏ hàng',
+          label: 'Yêu thích',
+        ),
+        BottomNavigationBarItem(
+          icon: ImageIcon(
+            AssetImage('asset/shopping-cart.png'),
+            size: 24,
           ),
-          BottomNavigationBarItem(
-            icon: ImageIcon(
-              AssetImage('asset/user.png'),
-              size: 24,
-            ),
-            label: 'Tài khoản',
+          label: 'Giỏ hàng',
+        ),
+        BottomNavigationBarItem(
+          icon: ImageIcon(
+            AssetImage('asset/user.png'),
+            size: 24,
           ),
-        ],
-      ),
+          label: 'Tài khoản',
+        ),
+      ],
     );
   }
 }
