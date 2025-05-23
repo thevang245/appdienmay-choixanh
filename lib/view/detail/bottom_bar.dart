@@ -8,16 +8,17 @@ class BottomActionBar extends StatelessWidget {
   final String tieude;
   final String gia;
   final String hinhdaidien;
+  final ValueNotifier<int> cartitemCount;
 
-  const BottomActionBar({
-    super.key,
-    required this.productId,
-    required this.userId,
-    required this.passwordHash,
-    required this.tieude,
-    required this.gia,
-    required this.hinhdaidien,
-  });
+  const BottomActionBar(
+      {super.key,
+      required this.productId,
+      required this.userId,
+      required this.passwordHash,
+      required this.tieude,
+      required this.gia,
+      required this.hinhdaidien,
+      required this.cartitemCount});
 
   @override
   Widget build(BuildContext context) {
@@ -52,13 +53,13 @@ class BottomActionBar extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: () async {
                     await APIService.addToCart(
-                      userId: userId,
-                      passwordHash: passwordHash,
-                      productId: productId,
-                      tieude: tieude,
-                      gia: gia,
-                      hinhdaidien: 'https://choixanh.com.vn$hinhdaidien',
-                    );
+                        userId: userId,
+                        passwordHash: passwordHash,
+                        productId: productId,
+                        tieude: tieude,
+                        gia: gia,
+                        hinhdaidien: 'https://choixanh.com.vn$hinhdaidien',
+                        cartitemCount: cartitemCount);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
@@ -91,15 +92,13 @@ class BottomActionBar extends StatelessWidget {
                 decoration: const BoxDecoration(
                   border: Border(
                     top: BorderSide(
-                      color: Colors.white, 
-                      width: 8, 
+                      color: Colors.white,
+                      width: 8,
                     ),
                   ),
                 ),
                 child: ElevatedButton(
-                  onPressed: () {
-                    
-                  },
+                  onPressed: () {},
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xff0066FF),
                     foregroundColor: Colors.white,
@@ -111,7 +110,9 @@ class BottomActionBar extends StatelessWidget {
                     elevation: 0,
                   ),
                   child: const Center(
-                    child: Text('Mua ngay', style: TextStyle(fontSize: 16,fontWeight: FontWeight.bold)),
+                    child: Text('Mua ngay',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ),

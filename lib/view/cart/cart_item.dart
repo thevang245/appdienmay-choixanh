@@ -7,6 +7,7 @@ class ItemCart extends StatelessWidget {
   final CartItemModel item;
   final VoidCallback? onTap;
   final ValueChanged<bool?>? onSelectedChanged;
+  final ValueNotifier<int> cartitemCount;
 
   final VoidCallback? onIncrease;
   final VoidCallback? onDecrease;
@@ -20,6 +21,7 @@ class ItemCart extends StatelessWidget {
       required this.item,
       this.onTap,
       this.onSelectedChanged,
+      required this.cartitemCount,
       this.onIncrease,
       this.onDecrease,
       required this.userId,
@@ -125,6 +127,7 @@ class ItemCart extends StatelessWidget {
                     GestureDetector(
                       onTap: () async {
                         await APIService.removeCartItem(
+                          cartitemCount: cartitemCount,
                             userId: userId, productId: '${item.id}');
                         if (OnDeleted != null) OnDeleted!();
                       },

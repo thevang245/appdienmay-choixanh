@@ -6,10 +6,12 @@ import 'package:flutter_application_1/services/api_service.dart';
 import 'package:flutter_application_1/view/auth/register.dart';
 import 'package:flutter_application_1/view/cart/cart_page.dart';
 import 'package:flutter_application_1/view/components/bottom_appbar.dart';
+import 'package:flutter_application_1/view/detail/comment_card.dart';
 import 'package:flutter_application_1/view/detail/bottom_bar.dart';
 import 'package:flutter_application_1/view/detail/detail_description.dart';
 import 'package:flutter_application_1/view/detail/detail_imggallery.dart';
 import 'package:flutter_application_1/view/detail/detail_pricetitle.dart';
+import 'package:flutter_application_1/view/detail/relatedproduct_card.dart';
 import 'package:flutter_application_1/view/detail/specs_data.dart';
 import 'package:flutter_application_1/view/home/homepage.dart';
 import 'package:flutter_application_1/view/profile/profile.dart';
@@ -17,17 +19,22 @@ import 'package:flutter_application_1/view/until/technicalspec_detail.dart';
 import 'package:flutter_application_1/view/until/until.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:html/parser.dart'; // Dùng để parse chuỗi HTML
 
 class DetailPage extends StatefulWidget {
   final String productId;
   final ValueNotifier<int> categoryNotifier;
+  final ValueNotifier<int> cartitemCount;
   final VoidCallback? onBack;
+  final void Function(dynamic product)? onProductTap;
 
   const DetailPage(
       {super.key,
       required this.productId,
       required this.categoryNotifier,
-      this.onBack});
+      required this.cartitemCount,
+      this.onBack,
+      this.onProductTap});
 
   @override
   State<DetailPage> createState() => _DetailPageState();
@@ -42,117 +49,67 @@ class _DetailPageState extends State<DetailPage> {
   bool isLoading = true;
   bool isBackVisible = true;
   final ScrollController _scrollController = ScrollController();
-
-  String _userid = '';
-  String _pass = '';
-
-  Future<void> loadLoginStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    String userid = prefs.getString('userid') ?? '';
-    String pass = prefs.getString('pass') ?? '';
-
-    setState(() {
-      _userid = userid;
-      _pass = pass;
-    });
-  }
-
-  final ValueNotifier<int> categoryNotifier = ValueNotifier(35278);
+  List<dynamic> commentCard = [];
+  late String moduleType;
+  List<dynamic> _productsRelated = [];
 
   String getModuleNameFromCategoryId(int categoryId) {
     if (categoryModules.containsKey(categoryId)) {
       final moduleParts = categoryModules[categoryId];
       if (moduleParts != null && moduleParts.length >= 3) {
-        return moduleParts[1]; // Lấy 'sanpham' hoặc 'tintuc'
+        return moduleParts[1];
+      } else {
+        print('=> Không đủ phần tử hoặc null');
       }
+    } else {
+      print('=> Không tìm thấy categoryId trong map');
     }
-    return 'sanpham'; // fallback nếu không có
+    return 'sanpham';
   }
 
-  // Hàm lấy chi tiết sản phẩm từ API
-  Future<void> fetchProductDetail(String moduleType) async {
-    print('categoryId: ${categoryNotifier.value}');
-    final int productId = int.tryParse(widget.productId.toString()) ?? 0;
-    print('Fetching product details from ID: $productId');
-    final String url =
-        'https://choixanh.com.vn/ww2/module.$moduleType.chitiet.asp?id=$productId';
-    print('Fetching product details from: $url');
-
-    try {
-      final response = await http.get(Uri.parse(url));
-
-      if (response.statusCode == 200) {
-        String responseBody = response.body;
-        responseBody = responseBody.replaceAll(RegExp(r',\s*,\s*'), ',');
-        responseBody =
-            responseBody.replaceAll(RegExp(r',\s*(?=\s*[\}\]])'), '');
-        responseBody = responseBody.replaceAll(RegExp(r',\s*$'), '');
-        print('Sanitized response: $responseBody'); // In ra để kiểm tra
-
-        try {
-          // Kiểm tra xem dữ liệu có phải là mảng hay không
-          final data = json.decode(responseBody);
-
-          if (data is List && data.isNotEmpty) {
-            final detail = data.first;
-            final hinhAnhs = getDanhSachHinh(detail);
-
-            setState(() {
-              productDetail = detail;
-              isLoading = false;
-              selectedImageUrl = hinhAnhs.isNotEmpty ? hinhAnhs[0] : null;
-            });
-          } else {
-            print('Không có dữ liệu hoặc không phải danh sách');
-          }
-        } catch (e) {
-          print('Lỗi khi phân tích cú pháp JSON: $e');
-        }
-      } else {
-        throw Exception('Lỗi khi tải chi tiết sản phẩm');
-      }
-    } catch (e) {
-      print('Lỗi API: $e');
+  Future<void> loadProductDetail() async {
+    final detail = await APIService.fetchProductDetail(
+      APIService.baseUrl,
+      moduleType,
+      widget.productId,
+      getDanhSachHinh,
+    );
+    if (detail != null) {
+      final hinhAnhs = getDanhSachHinh(detail);
+      setState(() {
+        productDetail = detail;
+        isLoading = false;
+        selectedImageUrl = hinhAnhs.isNotEmpty ? hinhAnhs[0] : null;
+      });
+    } else {
       setState(() {
         isLoading = false;
       });
     }
   }
 
-  Future<void> fetchHtmlContent(String url) async {
-    try {
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        setState(() {
-          htmlContent = response.body;
-          isLoadingHtml = false;
-        });
-      } else {
-        htmlContent = "<p>Không thể tải nội dung chi tiết.</p>";
-      }
-    } catch (e) {
-      htmlContent = "<p>Lỗi tải nội dung: $e</p>";
-    } finally {
-      setState(() {
-        isLoadingHtml = false;
-      });
-    }
+  Future<void> loadHtmlContent(String url) async {
+    setState(() {
+      isLoadingHtml = true;
+    });
+    final content = await APIService.fetchHtmlContent(url);
+    setState(() {
+      htmlContent = content;
+      isLoadingHtml = false;
+    });
   }
 
   @override
   void initState() {
     super.initState();
 
-    final moduleType =
-        getModuleNameFromCategoryId(widget.categoryNotifier.value);
-    fetchProductDetail(moduleType);
-    loadLoginStatus();
+    moduleType = getModuleNameFromCategoryId(widget.categoryNotifier.value);
+
+    getProducts();
 
     final htmlUrl =
         'https://choixanh.com.vn/ww2/module.$moduleType.chitiet.asp?id=${widget.productId}&sl=30&pageid=1';
-    if (htmlUrl.startsWith('http')) {
-      fetchHtmlContent(htmlUrl);
-    }
+    loadHtmlContent(htmlUrl);
 
     _scrollController.addListener(() {
       if (_scrollController.position.userScrollDirection ==
@@ -162,6 +119,39 @@ class _DetailPageState extends State<DetailPage> {
           ScrollDirection.forward) {
         if (!isBackVisible) setState(() => isBackVisible = true);
       }
+    });
+
+    loadProductDetail();
+    loadComments();
+  }
+
+  Future<void> loadComments() async {
+    try {
+      final response = await APIService.loadComments();
+      if (mounted) {
+        setState(() {
+          commentCard = response;
+        });
+      }
+      print('Số comment sau khi load: ${commentCard.length}');
+    } catch (e) {
+      print('Lỗi khi load comment: $e');
+    }
+  }
+
+  String parseHtmlString(String htmlString) {
+    final document = parse(htmlString);
+    final String parsedString =
+        parse(document.body?.text).documentElement?.text ?? '';
+    return parsedString.trim();
+  }
+
+  void getProducts() async {
+    List<dynamic> products =
+        await APIService.getProductRelated(id: widget.productId);
+
+    setState(() {
+      _productsRelated = products;
     });
   }
 
@@ -184,7 +174,8 @@ class _DetailPageState extends State<DetailPage> {
     final hinhAnhs = getDanhSachHinh(product);
     final String title = product['tieude'] ?? 'Sản phẩm chưa có tên';
     final String price = product['gia'] ?? 'Chưa có giá';
-    final String description = product['noidungchitiet'] ?? 'Không có mô tả';
+    final String description = (product['noidungchitiet'] ?? 'Không có mô tả')
+        .replaceAll("''", '"'); // Chuyển '' => "
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -222,13 +213,95 @@ class _DetailPageState extends State<DetailPage> {
                           entry.key: getNestedTengoi(product, entry.value)
                       },
                     ),
+                    if (_productsRelated.isNotEmpty) ...[
+                      Container(
+                        margin: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50], // Nền xám nhạt
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 8),
+                              child: Text(
+                                'Sản phẩm liên quan',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                            SizedBox(
+                              height: 220, // Chiều cao đủ để hiển thị sản phẩm
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _productsRelated.length,
+                                itemBuilder: (context, index) {
+                                  final item = _productsRelated[index];
+                                  return RelatedProductCard(
+                                    product: item,
+                                    onTap: () {
+                                      if (widget.onProductTap != null) {
+                                        widget.onProductTap!(item);
+                                      }
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    if (commentCard.isNotEmpty) ...[
+                      Container(
+                        color: Colors.grey[50], // màu nền xám nhạt
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.only(left: 8),
+                              child: Text(
+                                'Khách hàng nhận xét',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              height: 180,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: commentCard.length,
+                                itemBuilder: (context, index) {
+                                  final comment = commentCard[index];
+                                  return CommentCard(
+                                    name: comment['tieude'] ?? 'Ẩn danh',
+                                    content: parseHtmlString(
+                                        comment['noidungtomtat'] ?? ''),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
             ),
           ),
 
-          // Transparent AppBar with back button
           SafeArea(
             child: AnimatedOpacity(
               duration: const Duration(milliseconds: 300),
@@ -269,7 +342,7 @@ class _DetailPageState extends State<DetailPage> {
                         onPressed: () async {
                           await APIService.toggleFavourite(
                               context: context,
-                              userId: _userid,
+                              userId: Global.userId,
                               productId: int.tryParse(widget.productId) ?? 0,
                               tieude: product['tieude'],
                               gia: product['gia'],
@@ -292,8 +365,9 @@ class _DetailPageState extends State<DetailPage> {
               gia: product['gia'],
               hinhdaidien: product['hinhdaidien'],
               productId: int.tryParse(widget.productId) ?? 0,
-              userId: _userid,
-              passwordHash: _pass,
+              userId: Global.userId,
+              passwordHash: Global.pass,
+              cartitemCount: widget.cartitemCount,
             )
         ],
       ),

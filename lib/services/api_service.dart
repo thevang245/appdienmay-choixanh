@@ -64,6 +64,61 @@ class APIService {
     }
   }
 
+  static Future<List<dynamic>> getProductRelated({
+  required String id,
+  int sl = 30,
+  int pageId = 1,
+}) async {
+  try {
+    final uri = Uri.parse(
+      '$baseUrl/ww2/module.sanpham.chitiet.lienquan.asp',
+    ).replace(
+      queryParameters: {
+        'id': id,
+        'sl': sl.toString(),
+        'pageid': pageId.toString(),
+      },
+    );
+
+    print('Gọi API sản phẩm liên quan: $uri');
+
+    final response = await http.get(uri);
+
+    if (response.statusCode == 200) {
+      final body = response.body;
+      print('Dữ liệu sản phẩm liên quan: $body');
+
+      try {
+        final decoded = json.decode(body);
+
+        /// ✅ Trường hợp phản hồi là List chứa Map có key 'data'
+        if (decoded is List && decoded.isNotEmpty) {
+          final first = decoded[0];
+          if (first is Map && first.containsKey('data')) {
+            return first['data'];
+          } else {
+            print('Không tìm thấy key "data" trong phần tử đầu tiên.');
+            return [];
+          }
+        } else {
+          print('Phản hồi không phải List hoặc List rỗng.');
+          return [];
+        }
+      } catch (e) {
+        print('Lỗi parse JSON: $e');
+        return [];
+      }
+    } else {
+      print('Lỗi server: ${response.statusCode}');
+      return [];
+    }
+  } catch (e) {
+    print('Lỗi khi gọi API: $e');
+    return [];
+  }
+}
+
+
   static Future<List<dynamic>> loadComments() async {
     final uri = Uri.parse('$baseUrl/ww2/module.tintuc.asp').replace(
       queryParameters: {
@@ -78,12 +133,10 @@ class APIService {
       if (response.statusCode == 200) {
         final decoded = json.decode(response.body);
 
-        print('Phản hồi JSON gốc: ${response.body}');
-
         if (decoded is List && decoded.isNotEmpty) {
-          final first = decoded[0];
-          if (first is Map && first.containsKey('data')) {
-            final dataList = first['data'];
+          final firstItem = decoded[0];
+          if (firstItem is Map<String, dynamic>) {
+            final dataList = firstItem['data'];
             if (dataList is List) {
               print('Số comment nhận được: ${dataList.length}');
               return dataList;
@@ -101,14 +154,14 @@ class APIService {
     }
   }
 
-  static Future<bool> addToCart({
-    required String userId,
-    required String passwordHash,
-    required int productId,
-    required String tieude,
-    required String gia,
-    required String hinhdaidien,
-  }) async {
+  static Future<bool> addToCart(
+      {required String userId,
+      required String passwordHash,
+      required int productId,
+      required String tieude,
+      required String gia,
+      required String hinhdaidien,
+      required ValueNotifier<int> cartitemCount}) async {
     final uri = Uri.parse('$baseUrl/ww1/save.addcart.asp').replace(
       queryParameters: {
         'userid': userId,
@@ -135,8 +188,6 @@ class APIService {
               final prefs = await SharedPreferences.getInstance();
               final key = 'cart_items_$userId';
               List<String> cartItems = prefs.getStringList(key) ?? [];
-
-// Parse lại từng item để kiểm tra id
               bool exists = false;
               for (var itemStr in cartItems) {
                 try {
@@ -161,6 +212,8 @@ class APIService {
 
                 cartItems.add(itemJsonString);
                 await prefs.setStringList(key, cartItems);
+
+                cartitemCount.value++; // ✅ CHỈ tăng khi thực sự thêm thành công
                 print(
                     '✅ Đã lưu sản phẩm vào SharedPreferences (JSON): $itemJsonString');
                 return true;
@@ -228,10 +281,14 @@ class APIService {
   static Future<bool> removeCartItem({
     required String userId,
     required String productId,
+    required ValueNotifier<int> cartitemCount,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final key = 'cart_items_$userId';
     List<String> cartItems = prefs.getStringList(key) ?? [];
+
+    // Đếm số lượng ban đầu
+    final initialLength = cartItems.length;
 
     // Lọc ra những item không khớp với id cần xóa
     cartItems.removeWhere((itemStr) {
@@ -244,8 +301,22 @@ class APIService {
       }
     });
 
+    // Nếu số lượng bị giảm => đã xóa thành công
+    final removed = cartItems.length < initialLength;
+
     // Lưu lại danh sách mới
-    return await prefs.setStringList(key, cartItems);
+    final saved = await prefs.setStringList(key, cartItems);
+
+    if (removed && saved) {
+      // Giảm số lượng hiển thị nếu có sản phẩm bị xóa
+      cartitemCount.value =
+          (cartitemCount.value > 0) ? cartitemCount.value - 1 : 0;
+      print('✅ Đã xóa sản phẩm và cập nhật itemCount: ${cartitemCount.value}');
+      return true;
+    }
+
+    print('⚠️ Không có gì bị xóa hoặc không lưu được danh sách mới');
+    return false;
   }
 
   static Future<void> datHang({
@@ -364,6 +435,57 @@ class APIService {
       return data is List ? data : [data];
     } else {
       throw Exception('Lỗi khi lấy bộ lọc chi tiết: ${response.statusCode}');
+    }
+  }
+
+  static Future<Map<String, dynamic>?> fetchProductDetail(
+      String baseUrl,
+      String danhmuc,
+      String productId,
+      Function(List<String>) getDanhSachHinh) async {
+    final int productIdInt = int.tryParse(productId) ?? 0;
+    final String url =
+        '$baseUrl/ww2/module.$danhmuc.chitiet.asp?id=$productIdInt';
+    print('Fetching product details from: $url');
+
+    try {
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        String responseBody = response.body;
+        responseBody = responseBody.replaceAll(RegExp(r',\s*,\s*'), ',');
+        responseBody =
+            responseBody.replaceAll(RegExp(r',\s*(?=\s*[\}\]])'), '');
+        responseBody = responseBody.replaceAll(RegExp(r',\s*$'), '');
+
+        final data = json.decode(responseBody);
+
+        if (data is List && data.isNotEmpty) {
+          final detail = data.first;
+          return detail;
+        } else {
+          print('No data or data is not a list');
+          return null;
+        }
+      } else {
+        throw Exception('Error loading product details');
+      }
+    } catch (e) {
+      print('API error: $e');
+      return null;
+    }
+  }
+
+  static Future<String?> fetchHtmlContent(String url) async {
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        return response.body;
+      } else {
+        return "<p>Không thể tải nội dung chi tiết.</p>";
+      }
+    } catch (e) {
+      return "<p>Lỗi tải nội dung: $e</p>";
     }
   }
 }

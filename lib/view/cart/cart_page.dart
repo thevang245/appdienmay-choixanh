@@ -14,7 +14,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class PageCart extends StatefulWidget {
   final Function(CartItemModel product) onProductTap;
-  const PageCart({super.key, required this.onProductTap});
+  final ValueNotifier<int> cartitemCount;
+  const PageCart({super.key, required this.onProductTap, required this.cartitemCount});
 
   @override
   State<PageCart> createState() => PageCartState();
@@ -130,6 +131,7 @@ class PageCartState extends State<PageCart> {
                             } else {
                               final item = cartItems[index];
                               return ItemCart(
+                                cartitemCount: widget.cartitemCount,
                                 userId: Global.userId,
                                 item: item,
                                 isSelected: item.isSelect,
@@ -187,6 +189,7 @@ class PageCartState extends State<PageCart> {
                         tongThanhToan: tongThanhToan,
                         onConfirm: () async {
                           await handleDatHang(
+                            cartitemCount: widget.cartitemCount,
                             context: context,
                             userId: Global.userId,
                             customerName: fullnameController.text,

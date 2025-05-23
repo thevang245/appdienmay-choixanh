@@ -23,12 +23,15 @@ class PageAll extends StatefulWidget {
 
 class _PageAllState extends State<PageAll> {
   int _currentIndex = 0;
-  final ValueNotifier<int> categoryNotifier = ValueNotifier(35278);
+  final ValueNotifier<int> categoryNotifier = ValueNotifier(0);
   final GlobalKey<favouritePageState> favouritePageKey =
       GlobalKey<favouritePageState>();
   final GlobalKey<PageCartState> cartPageKey = GlobalKey<PageCartState>();
   final GlobalKey<CarthistoryPageState> carthistoryPageKey =
       GlobalKey<CarthistoryPageState>();
+
+  final ValueNotifier<int> cartItemCountNotifier = ValueNotifier(0);
+  final List<dynamic> _productDetailStack = [];
 
   String _currentPage = 'home';
   String _previousPage = 'home';
@@ -56,11 +59,17 @@ class _PageAllState extends State<PageAll> {
     );
 
     _cartPage = PageCart(
+      cartitemCount: cartItemCountNotifier,
       key: cartPageKey,
       onProductTap: (product) {
         _goToDetail(product, 'cart');
       },
     );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final cartItems = cartPageKey.currentState?.cartItems ?? [];
+      cartItemCountNotifier.value = cartItems.length;
+    });
     _favouritePage = favouritePage(
       key: favouritePageKey,
     );
@@ -81,30 +90,67 @@ class _PageAllState extends State<PageAll> {
     });
   }
 
-  void _goToDetail(dynamic product, String fromPage) {
+  void _goToDetail(dynamic product, String fromPage, {bool isBack = false}) {
+    String? currentId;
+    String? newId;
+
+    if (selectedProduct != null) {
+      if (selectedProduct is CartItemModel) {
+        currentId = selectedProduct.id;
+      } else if (selectedProduct is Map) {
+        currentId = selectedProduct['id'].toString();
+      }
+    }
+
+    if (product is CartItemModel) {
+      newId = product.id;
+    } else if (product is Map) {
+      newId = product['id'].toString();
+    }
+
+    // Chỉ thêm vào stack khi đi tới chi tiết mới, không phải khi quay lại
+    if (!isBack &&
+        _currentPage == 'detail' &&
+        currentId != null &&
+        newId != null &&
+        currentId != newId) {
+      _productDetailStack.add(selectedProduct);
+    }
+
     setState(() {
       selectedProduct = product;
-      _previousPage = fromPage;
       _currentPage = 'detail';
+      _detailPage = null;
 
-      // Tạo một lần, không tạo lại mỗi khi build
-      String productId = '0';
-      if (product is CartItemModel) {
-        productId = product.id;
-      } else if (product is Map) {
-        productId = product['id'].toString();
-      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {
+          final productId = newId ?? '0';
 
-      _detailPage = DetailPage(
-        productId: productId,
-        categoryNotifier: categoryNotifier,
-        onBack: () {
-          setState(() {
-            _currentPage = _previousPage;
-            _detailPage = null; // reset lại detail khi quay về
-          });
-        },
-      );
+          _detailPage = DetailPage(
+            cartitemCount: cartItemCountNotifier,
+            productId: productId,
+            categoryNotifier: categoryNotifier,
+            onBack: () {
+              if (_productDetailStack.isNotEmpty) {
+                final previousProduct = _productDetailStack.removeLast();
+                // Gọi _goToDetail với isBack = true để không push lại sản phẩm hiện tại
+                _goToDetail(previousProduct, 'detail', isBack: true);
+              } else {
+                setState(() {
+                  _currentPage = _previousPage;
+                  _detailPage = null;
+                  selectedProduct = null;
+                  _previousPage = 'home';
+                  _productDetailStack.clear();
+                });
+              }
+            },
+            onProductTap: (newProduct) {
+              _goToDetail(newProduct, 'detail');
+            },
+          );
+        });
+      });
     });
   }
 
@@ -173,8 +219,11 @@ class _PageAllState extends State<PageAll> {
         body: Stack(
           children: [
             Padding(
-              padding: EdgeInsets.only(top: kToolbarHeight,
-              bottom:kBottomNavigationBarHeight + MediaQuery.of(context).padding.bottom, ),
+              padding: EdgeInsets.only(
+                top: kToolbarHeight,
+                bottom: kBottomNavigationBarHeight +
+                    MediaQuery.of(context).padding.bottom,
+              ),
               child: IndexedStack(
                 index: _getPageIndex(),
                 children: [
@@ -203,11 +252,16 @@ class _PageAllState extends State<PageAll> {
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    
                   ),
-                  child: CustomBottomNavBar(
-                    currentIndex: _currentIndex,
-                    onTap: _onTabTapped,
+                  child: ValueListenableBuilder<int>(
+                    valueListenable: cartItemCountNotifier,
+                    builder: (context, value, child) {
+                      return CustomBottomNavBar(
+                        cartitemCount: value,
+                        currentIndex: _currentIndex,
+                        onTap: _onTabTapped,
+                      );
+                    },
                   ),
                 ),
               ),

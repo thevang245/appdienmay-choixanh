@@ -88,29 +88,21 @@ class DanhMucDrawer extends StatelessWidget {
                   Center(
                     child: Image.network(
                       'https://choixanh.vn/mediaroot/media/userfiles/useruploads/1/image/he-thong/logo-10.png',
-                      color: Colors.white,
                       fit: BoxFit.contain,
+                      color: Colors.white,
                     ),
                   ),
-                  Positioned(
-                    bottom: 8,
-                    right: 8,
+                  Align(
+                    alignment: Alignment.centerRight,
                     child: GestureDetector(
                       onTap: () {
-                        Navigator.pop(context); // Đóng Drawer
+                        Navigator.pop(context);
                       },
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.close, color: Colors.white70, size: 18),
-                          SizedBox(width: 2),
-                          Text(
-                            'Đóng',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          Icon(Icons.keyboard_double_arrow_left,
+                              color: Colors.white70, size: 30),
                         ],
                       ),
                     ),
@@ -119,109 +111,163 @@ class DanhMucDrawer extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(8),
-                children: [
-                  ...danhMucData.entries.map((entry) {
-                    final value = entry.value;
-                    // Trường hợp mục chính là int (có id)
-                    if (value == null || value is int) {
-                      return ListTile(
-                        title: Text(entry.key),
-                        onTap: () {
-                          if (value != null) {
-                            onCategorySelected(value);
-                          }
-                          Navigator.of(context).pop();
-                        },
-                      );
-                    }
-
-                    // Trường hợp có children (như "Cười")
-                    else if (value is Map<String, dynamic>) {
-                      final parentId = value['id'];
-                      final children =
-                          value['children'] as Map<String, dynamic>?;
-
-                      return ExpansionTile(
-                        title: InkWell(
+              child: Container(
+                color: Colors.grey[100],
+                child: ListView(
+                  padding: const EdgeInsets.all(8),
+                  children: [
+                    ...danhMucData.entries.map((entry) {
+                      final value = entry.value;
+                      // Trường hợp mục chính là int (có id)
+                      if (value == null || value is int) {
+                        return ListTile(
+                          title: Text(entry.key),
                           onTap: () {
-                            if (parentId != null) {
-                              onCategorySelected(parentId);
-                              Navigator.of(context).pop();
+                            if (value != null) {
+                              onCategorySelected(value);
                             }
+                            Navigator.of(context).pop();
                           },
-                          child: Text(entry.key,
-                              style: TextStyle(fontWeight: FontWeight.bold)),
-                        ),
-                        children: children?.entries.map((subEntry) {
-                              final subId = subEntry.value;
-                              return ListTile(
-                                title: Text(subEntry.key),
-                                onTap: () {
-                                  if (subId != null) {
-                                    onCategorySelected(subId);
-                                  }
-                                  Navigator.of(context).pop();
-                                },
-                              );
-                            }).toList() ??
-                            [],
-                      );
-                    }
+                        );
+                      }
 
-                    return SizedBox.shrink();
-                  }).toList(),
-                  const SizedBox(height: 24),
-                  Divider(
-                    thickness: 1,
-                    color: Color(0xFF0033FF),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                      'Chồi Xanh Media cung cấp các loại máy tính, laptop và thiết bị công nghệ chất lượng cao, đáp ứng mọi nhu cầu của doanh nghiệp và cá nhân'),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Icon(Icons.home_work_sharp),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Công ty chồi xanh Media',
-                          style: TextStyle(fontSize: 16),
+                      // Trường hợp có children (như "Cười")
+                      else if (value is Map<String, dynamic>) {
+                        final parentId = value['id'];
+                        final children =
+                            value['children'] as Map<String, dynamic>?;
+
+                        return ExpansionTile(
+                          title: InkWell(
+                            onTap: () {
+                              if (parentId != null) {
+                                onCategorySelected(parentId);
+                                Navigator.of(context).pop();
+                              }
+                            },
+                            child: Text(entry.key,
+                                style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                          children: children?.entries.map((subEntry) {
+                                final subId = subEntry.value;
+                                return ListTile(
+                                  title: Text(subEntry.key),
+                                  onTap: () {
+                                    if (subId != null) {
+                                      onCategorySelected(subId);
+                                    }
+                                    Navigator.of(context).pop();
+                                  },
+                                );
+                              }).toList() ??
+                              [],
+                        );
+                      }
+
+                      return SizedBox.shrink();
+                    }).toList(),
+                    const SizedBox(height: 24),
+                    Divider(
+                      thickness: 1,
+                    ),
+                    const SizedBox(height: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 2),
+                          child: RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: 'Chồi Xanh Media ',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Color(0xFF198754),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text:
+                                      'cung cấp các loại máy tính, laptop và thiết bị công nghệ chất lượng cao, đáp ứng mọi nhu cầu của doanh nghiệp và cá nhân.',
+                                  style: TextStyle(
+                                    fontSize: 15.5,
+                                    height: 1.3,
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.normal,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Icon(Icons.location_on),
-                      SizedBox(width: 8),
-                      Text('82A - 82B Dân Tộc, Q. Tân Phú'),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Icon(Icons.document_scanner),
-                      SizedBox(width: 8),
-                      Text('MST: 0314581926'),
-                    ],
-                  ),
-                  Text('028 3974 3179'),
-                  Text('info@choixanh.vn'),
-                  Row(
-                    children: [
-                      Icon(Icons.share),
-                      SizedBox(width: 8),
-                      Text('Theo dõi Chồi Xanh Media'),
-                    ],
-                  ),
-                ],
+                        const SizedBox(height: 16),
+                        _InfoRow(
+                            icon: Icons.apartment,
+                            text: 'Công ty Chồi Xanh Media'),
+                        const SizedBox(height: 12),
+                        _InfoRow(
+                            icon: Icons.location_on,
+                            text: '82A - 82B Dân Tộc, Q. Tân Phú'),
+                        const SizedBox(height: 12),
+                        _InfoRow(
+                            icon: Icons.document_scanner,
+                            text: 'MST: 0314581926'),
+                        const SizedBox(height: 12),
+                        _InfoRow(icon: Icons.phone, text: '028 3974 3179'),
+                        const SizedBox(height: 12),
+                        _InfoRow(icon: Icons.email, text: 'info@choixanh.vn'),
+                        const SizedBox(height: 12),
+                        _InfoRow(
+                            icon: Icons.share,
+                            text: 'Theo dõi Chồi Xanh Media'),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _InfoRow({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.green[100],
+            borderRadius: BorderRadius.circular(6),
+          ),
+          padding: EdgeInsets.all(6),
+          child: Icon(
+            icon,
+            size: 20,
+            color: Color(0xFF198754),
+          ),
+        ),
+        SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 15,
+              color: Colors.grey[800],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:html/parser.dart' as html_parser;
+import 'package:url_launcher/url_launcher.dart';
 
 class DetailHtmlContent extends StatelessWidget {
   final String? htmlContent;
@@ -18,20 +19,20 @@ class DetailHtmlContent extends StatelessWidget {
 
   /// An toàn hơn: nếu null hoặc lỗi sẽ trả về "Không có nội dung"
   String _safeShortenHtml(String? html, int maxLength) {
-    print("HTML Content: $htmlContent");
+    print("===> HTML nội dung chi tiết:\n$htmlContent");
 
     if (html == null || html.trim().isEmpty) return "<p>Không có nội dung</p>";
+
     try {
-      final document = html_parser.parse(html);
-      final text = document.body?.text ?? '';
-      if (text.length <= maxLength) return html;
-      final truncatedText = text.substring(0, maxLength) + "...";
-      return "<p>$truncatedText</p>";
+      if (html.length <= maxLength) return html;
+
+      // Cắt HTML trực tiếp nhưng không phá vỡ thẻ HTML
+      final truncated = html.substring(0, maxLength);
+      return "$truncated...";
     } catch (e) {
-      return "<p>Lỗi phân tích nội dung</p>";
+      return "<p>Lỗi khi rút gọn nội dung</p>";
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -47,14 +48,14 @@ class DetailHtmlContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          padding: EdgeInsets.symmetric(horizontal: 8),
           child: Html(
             data: isExpanded
                 ? safeHtmlContent
                 : _safeShortenHtml(safeHtmlContent, 300),
             style: {
               "body": Style(
-                fontSize: FontSize(16.0),
+                fontSize: FontSize(15.0),
                 color: Colors.black,
                 margin: Margins.zero,
                 padding: HtmlPaddings.zero,
@@ -71,7 +72,8 @@ class DetailHtmlContent extends StatelessWidget {
               children: [
                 Text(
                   isExpanded ? 'Thu gọn' : 'Xem thêm',
-                  style: const TextStyle(color: Color(0xff0066FF), fontSize: 15),
+                  style:
+                      const TextStyle(color: Color(0xff0066FF), fontSize: 15),
                 ),
                 const Icon(
                   Icons.keyboard_arrow_down,

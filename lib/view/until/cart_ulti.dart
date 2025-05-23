@@ -22,6 +22,7 @@ Future<void> handleDatHang({
   required String tel,
   required List<CartItemModel> cartItems,
   required Future<void> Function() onCartReload,
+  required ValueNotifier<int> cartitemCount
 }) async {
   try {
     await APIService.datHang(
@@ -39,6 +40,7 @@ Future<void> handleDatHang({
     // ✅ Xóa các item đã chọn khỏi giỏ hàng
     for (var item in selectedItems) {
       await APIService.removeCartItem(
+        cartitemCount: cartitemCount,
         userId: userId,
         productId: item.id.toString(),
       );

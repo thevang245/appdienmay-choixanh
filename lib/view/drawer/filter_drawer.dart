@@ -72,11 +72,11 @@ class _BoLocDrawerState extends State<BoLocDrawer> {
                   },
                   child: Row(
                     children: const [
-                      Icon(Icons.close, color: Colors.white, size: 22),
+                      Icon(Icons.close, color: Colors.white, size: 20),
                       SizedBox(width: 2),
                       Text(
                         "Đóng",
-                        style: TextStyle(color: Colors.white, fontSize: 18),
+                        style: TextStyle(color: Colors.white, fontSize: 16),
                       ),
                     ],
                   ),
@@ -105,7 +105,8 @@ class _BoLocDrawerState extends State<BoLocDrawer> {
                       final children = filter['children'] ?? [];
 
                       return Padding(
-                        padding: EdgeInsets.fromLTRB(16, index == 0 ? 0 : 10, 16, 10),
+                        padding: EdgeInsets.fromLTRB(
+                            16, index == 0 ? 0 : 10, 16, 10),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [

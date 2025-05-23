@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/models/category_model.dart';
 import 'package:flutter_application_1/services/api_service.dart';
-import 'package:flutter_application_1/view/components/comment_card.dart';
+import 'package:flutter_application_1/view/detail/comment_card.dart';
 import 'package:flutter_application_1/view/components/product_card.dart';
 import 'package:flutter_application_1/view/contact/contact.dart';
 import 'package:flutter_application_1/view/detail/detail_page.dart';
@@ -29,7 +29,6 @@ class HomePage extends StatefulWidget {
 class HomePageState extends State<HomePage> {
   int _categoryId = 0;
   List<dynamic> products = [];
-  List<dynamic> commentCart = [];
   bool isLoading = true;
 
   late VoidCallback _listener;
@@ -52,7 +51,6 @@ class HomePageState extends State<HomePage> {
 
     widget.categoryNotifier.addListener(_listener);
     loadLoginStatus();
-    loadComments();
     fetchProducts();
   }
 
@@ -68,25 +66,11 @@ class HomePageState extends State<HomePage> {
 
   Future<void> loadLoginStatus() async {
     final prefs = await SharedPreferences.getInstance();
+
     setState(() {
       Global.userId = prefs.getString('userid') ?? '';
+      Global.pass = prefs.getString('pass') ?? '';
     });
-  }
-
-  Future<void> loadComments() async {
-    try {
-      final response = await APIService.loadComments();
-      if (mounted) {
-        setState(() {
-          commentCart = response.isNotEmpty && response[0]['data'] != null
-              ? response[0]['data']
-              : [];
-        });
-      }
-      print('Số comment sau khi load: ${commentCart.length}');
-    } catch (e) {
-      print('Lỗi khi load comment: $e');
-    }
   }
 
   Future<void> fetchProducts() async {
@@ -105,10 +89,8 @@ class HomePageState extends State<HomePage> {
           35280,
           35283,
           35004,
-          35139,
-          35149,
-          35028,
-          35281
+          // 35139,
+          // 35149,
         ];
 
         for (int id in danhMucChaIds) {
@@ -213,80 +195,21 @@ class HomePageState extends State<HomePage> {
           padding: const EdgeInsets.all(8.0),
           children: groupedByCategory.entries.map((entry) {
             final categoryId = entry.key;
+
+            if (categoryId == 35149)
+              return SizedBox.shrink(); // <-- bỏ qua danh mục này
+
             final productList = entry.value.where((p) {
               return categoryId == 35004 || hasValidImage(p);
             }).toList();
             final categoryName = findCategoryNameById(danhMucData, categoryId);
 
-            if (categoryId == 35281) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(height: 12),
-                  Text(
-                    'Khách hàng nói gì?',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue[800],
-                    ),
-                  ),
-                  SizedBox(height: 12),
-                  SizedBox(
-                    height: 200,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: commentCart.length,
-                      itemBuilder: (context, index) {
-                        final comment = commentCart[index];
-                        return CommentCard(
-                          name: comment['tieude'] ?? '',
-                          content:
-                              parseHtmlString(comment['noidungtomtat'] ?? ''),
-                        );
-                      },
-                    ),
-                  ),
-                  if (productList.isNotEmpty) ...[
-                    SizedBox(height: 16),
-                    Text(
-                      categoryName.isNotEmpty
-                          ? categoryName
-                          : 'Danh mục $categoryId',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue[800],
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    MasonryGridView.count(
-                      shrinkWrap: true,
-                      physics: NeverScrollableScrollPhysics(),
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 4,
-                      crossAxisSpacing: 4,
-                      itemCount: productList.length,
-                      itemBuilder: (context, index) {
-                        final product = productList[index];
-                        return ProductCard(
-                          product: product,
-                          categoryId: categoryId,
-                          onTap: () => widget.onProductTap(product),
-                        );
-                      },
-                    ),
-                  ]
-                ],
-              );
-            }
-
             if (productList.isEmpty) return SizedBox.shrink();
 
-            return Column(
+            return SafeArea(
+                child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: 12),
                 Text(
                   categoryName.isNotEmpty
                       ? categoryName
@@ -315,7 +238,7 @@ class HomePageState extends State<HomePage> {
                   },
                 ),
               ],
-            );
+            ));
           }).toList(),
         ),
       );
@@ -358,4 +281,5 @@ class HomePageState extends State<HomePage> {
 
 class Global {
   static String userId = '';
+  static String pass = '';
 }
