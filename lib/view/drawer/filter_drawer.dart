@@ -7,17 +7,17 @@ class BoLocDrawer extends StatefulWidget {
 }
 
 class _BoLocDrawerState extends State<BoLocDrawer> {
-  late Future<List<dynamic>> futureBoLocFiltered;
+  List<Map<String, dynamic>> filtersWithChildren = [];
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    futureBoLocFiltered = _fetchBoLocWithChildren();
+    _fetchBoLocIncrementally();
   }
 
-  Future<List<dynamic>> _fetchBoLocWithChildren() async {
+  Future<void> _fetchBoLocIncrementally() async {
     final filters = await APIService.fetchBoLoc();
-    List<dynamic> result = [];
 
     for (var filter in filters) {
       final id = filter['id'];
@@ -29,17 +29,22 @@ class _BoLocDrawerState extends State<BoLocDrawer> {
 
       if (children.isNotEmpty) {
         filter['children'] = children;
-        result.add(filter);
+        setState(() {
+          filtersWithChildren.add(filter);
+        });
       }
     }
 
-    return result;
+    setState(() {
+      isLoading = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final double appBarHeight =
         kToolbarHeight + MediaQuery.of(context).padding.top;
+
     return Drawer(
       backgroundColor: Colors.white,
       child: Column(
@@ -85,22 +90,13 @@ class _BoLocDrawerState extends State<BoLocDrawer> {
             ),
           ),
           Expanded(
-            child: FutureBuilder<List<dynamic>>(
-              future: futureBoLocFiltered,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (snapshot.hasError) {
-                  return Center(child: Text('Lỗi: ${snapshot.error}'));
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('Không có dữ liệu bộ lọc'));
-                } else {
-                  final filters = snapshot.data!;
-                  return ListView.builder(
-                    padding: EdgeInsets.only(top: 10),
-                    itemCount: filters.length,
+            child: isLoading && filtersWithChildren.isEmpty
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    padding: const EdgeInsets.only(top: 10),
+                    itemCount: filtersWithChildren.length,
                     itemBuilder: (context, index) {
-                      final filter = filters[index];
+                      final filter = filtersWithChildren[index];
                       final title = filter['tieude'] ?? 'Bộ lọc $index';
                       final children = filter['children'] ?? [];
 
@@ -127,7 +123,7 @@ class _BoLocDrawerState extends State<BoLocDrawer> {
                                 return FilterChip(
                                   label: Text(childTitle),
                                   backgroundColor: Colors.grey[100],
-                                  side: BorderSide.none, // Không viền
+                                  side: BorderSide.none,
                                   onSelected: (bool selected) {
                                     Navigator.of(context).pop();
                                     // TODO: xử lý chọn chip con
@@ -139,10 +135,7 @@ class _BoLocDrawerState extends State<BoLocDrawer> {
                         ),
                       );
                     },
-                  );
-                }
-              },
-            ),
+                  ),
           ),
         ],
       ),

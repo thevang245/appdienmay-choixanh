@@ -16,3 +16,7 @@ For help getting started with Flutter development, view the
 samples, guidance on mobile development, and a full API reference.
 
 tạo biến màu chung
+tao thong bao
+bo loc vaf tim kiem
+
+

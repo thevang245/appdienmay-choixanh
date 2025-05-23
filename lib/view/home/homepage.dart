@@ -89,8 +89,8 @@ class HomePageState extends State<HomePage> {
           35280,
           35283,
           35004,
-          // 35139,
-          // 35149,
+          35139,
+          35149,
         ];
 
         for (int id in danhMucChaIds) {
@@ -103,7 +103,15 @@ class HomePageState extends State<HomePage> {
             extention: modules[2],
             categoryId: id,
           );
-          allProducts.addAll(fetched);
+
+          final enhanced = fetched.map<Map<String, dynamic>>((item) {
+            return {
+              ...item as Map<String, dynamic>, // ép kiểu rõ ở đây
+              'moduleType': modules[1],
+            };
+          }).toList();
+
+          allProducts.addAll(enhanced);
         }
       } else {
         final modules = categoryModules[_categoryId];

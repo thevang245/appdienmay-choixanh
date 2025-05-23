@@ -65,59 +65,59 @@ class APIService {
   }
 
   static Future<List<dynamic>> getProductRelated({
-  required String id,
-  int sl = 30,
-  int pageId = 1,
-}) async {
-  try {
-    final uri = Uri.parse(
-      '$baseUrl/ww2/module.sanpham.chitiet.lienquan.asp',
-    ).replace(
-      queryParameters: {
-        'id': id,
-        'sl': sl.toString(),
-        'pageid': pageId.toString(),
-      },
-    );
+    required String id,
+    required String modelType,
+    int sl = 30,
+    int pageId = 1,
+  }) async {
+    try {
+      final uri = Uri.parse(
+        '$baseUrl/ww2/module.$modelType.chitiet.lienquan.asp',
+      ).replace(
+        queryParameters: {
+          'id': id,
+          'sl': sl.toString(),
+          'pageid': pageId.toString(),
+        },
+      );
 
-    print('Gọi API sản phẩm liên quan: $uri');
+      print('Gọi API sản phẩm liên quan: $uri');
 
-    final response = await http.get(uri);
+      final response = await http.get(uri);
 
-    if (response.statusCode == 200) {
-      final body = response.body;
-      print('Dữ liệu sản phẩm liên quan: $body');
+      if (response.statusCode == 200) {
+        final body = response.body;
+        print('Dữ liệu sản phẩm liên quan: $body');
 
-      try {
-        final decoded = json.decode(body);
+        try {
+          final decoded = json.decode(body);
 
-        /// ✅ Trường hợp phản hồi là List chứa Map có key 'data'
-        if (decoded is List && decoded.isNotEmpty) {
-          final first = decoded[0];
-          if (first is Map && first.containsKey('data')) {
-            return first['data'];
+          /// ✅ Trường hợp phản hồi là List chứa Map có key 'data'
+          if (decoded is List && decoded.isNotEmpty) {
+            final first = decoded[0];
+            if (first is Map && first.containsKey('data')) {
+              return first['data'];
+            } else {
+              print('Không tìm thấy key "data" trong phần tử đầu tiên.');
+              return [];
+            }
           } else {
-            print('Không tìm thấy key "data" trong phần tử đầu tiên.');
+            print('Phản hồi không phải List hoặc List rỗng.');
             return [];
           }
-        } else {
-          print('Phản hồi không phải List hoặc List rỗng.');
+        } catch (e) {
+          print('Lỗi parse JSON: $e');
           return [];
         }
-      } catch (e) {
-        print('Lỗi parse JSON: $e');
+      } else {
+        print('Lỗi server: ${response.statusCode}');
         return [];
       }
-    } else {
-      print('Lỗi server: ${response.statusCode}');
+    } catch (e) {
+      print('Lỗi khi gọi API: $e');
       return [];
     }
-  } catch (e) {
-    print('Lỗi khi gọi API: $e');
-    return [];
   }
-}
-
 
   static Future<List<dynamic>> loadComments() async {
     final uri = Uri.parse('$baseUrl/ww2/module.tintuc.asp').replace(
@@ -424,6 +424,7 @@ class APIService {
 
   static Future<List<dynamic>> fetchBoLocChiTiet(String id) async {
     final url = Uri.parse('$baseUrl/ww2/crm.boloc.chitiet.asp?id=$id');
+    print(url);
 
     final response = await http.get(url, headers: {
       'Accept': 'application/json',

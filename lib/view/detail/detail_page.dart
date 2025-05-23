@@ -27,6 +27,7 @@ class DetailPage extends StatefulWidget {
   final ValueNotifier<int> cartitemCount;
   final VoidCallback? onBack;
   final void Function(dynamic product)? onProductTap;
+  final String? modelType;
 
   const DetailPage(
       {super.key,
@@ -34,13 +35,14 @@ class DetailPage extends StatefulWidget {
       required this.categoryNotifier,
       required this.cartitemCount,
       this.onBack,
-      this.onProductTap});
+      this.onProductTap,
+      this.modelType});
 
   @override
-  State<DetailPage> createState() => _DetailPageState();
+  State<DetailPage> createState() => DetailPageState();
 }
 
-class _DetailPageState extends State<DetailPage> {
+class DetailPageState extends State<DetailPage> {
   String? selectedImageUrl;
   String? htmlContent;
   bool isLoadingHtml = true;
@@ -53,7 +55,7 @@ class _DetailPageState extends State<DetailPage> {
   late String moduleType;
   List<dynamic> _productsRelated = [];
 
-  String getModuleNameFromCategoryId(int categoryId) {
+  static String getModuleNameFromCategoryId(int categoryId) {
     if (categoryModules.containsKey(categoryId)) {
       final moduleParts = categoryModules[categoryId];
       if (moduleParts != null && moduleParts.length >= 3) {
@@ -64,7 +66,7 @@ class _DetailPageState extends State<DetailPage> {
     } else {
       print('=> Không tìm thấy categoryId trong map');
     }
-    return 'sanpham';
+    return '';
   }
 
   Future<void> loadProductDetail() async {
@@ -103,7 +105,18 @@ class _DetailPageState extends State<DetailPage> {
   void initState() {
     super.initState();
 
-    moduleType = getModuleNameFromCategoryId(widget.categoryNotifier.value);
+    final categoryModule =
+        getModuleNameFromCategoryId(widget.categoryNotifier.value);
+
+    if (categoryModule.isEmpty || categoryModule == '') {
+      moduleType =
+          categoryModule.isEmpty ? (widget.modelType ?? '') : categoryModule;
+    } else {
+      moduleType = categoryModule;
+    }
+
+    print(
+        'categoryWidget: ${widget.modelType} , categoryModule: $categoryModule ,moduleType: $moduleType');
 
     getProducts();
 
@@ -123,6 +136,24 @@ class _DetailPageState extends State<DetailPage> {
 
     loadProductDetail();
     loadComments();
+  }
+
+  void getProducts() async {
+    List<dynamic> products = await APIService.getProductRelated(
+      id: widget.productId,
+      modelType: moduleType,
+    );
+
+    final enhancedProducts = products.map((item) {
+      return {
+        ...item as Map<String, dynamic>,
+        'moduleType': moduleType, 
+      };
+    }).toList();
+
+    setState(() {
+      _productsRelated = enhancedProducts;
+    });
   }
 
   Future<void> loadComments() async {
@@ -146,15 +177,6 @@ class _DetailPageState extends State<DetailPage> {
     return parsedString.trim();
   }
 
-  void getProducts() async {
-    List<dynamic> products =
-        await APIService.getProductRelated(id: widget.productId);
-
-    setState(() {
-      _productsRelated = products;
-    });
-  }
-
   @override
   void dispose() {
     _scrollController.dispose();
@@ -170,6 +192,7 @@ class _DetailPageState extends State<DetailPage> {
       );
     }
 
+    var model = moduleType;
     final product = productDetail ?? {};
     final hinhAnhs = getDanhSachHinh(product);
     final String title = product['tieude'] ?? 'Sản phẩm chưa có tên';
@@ -223,11 +246,13 @@ class _DetailPageState extends State<DetailPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Padding(
+                            Padding(
                               padding: EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 8),
                               child: Text(
-                                'Sản phẩm liên quan',
+                                model == 'tintuc'
+                                    ? 'Tin tức liên quan'
+                                    : 'Sản phẩm liên quan',
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -258,7 +283,7 @@ class _DetailPageState extends State<DetailPage> {
                       ),
                     ],
 
-                    if (commentCard.isNotEmpty) ...[
+                    if (commentCard.isNotEmpty && model != 'tintuc') ...[
                       Container(
                         color: Colors.grey[50], // màu nền xám nhạt
                         padding: const EdgeInsets.symmetric(vertical: 12),

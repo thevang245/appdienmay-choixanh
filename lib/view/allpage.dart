@@ -127,6 +127,7 @@ class _PageAllState extends State<PageAll> {
           final productId = newId ?? '0';
 
           _detailPage = DetailPage(
+            modelType: product['moduleType'],
             cartitemCount: cartItemCountNotifier,
             productId: productId,
             categoryNotifier: categoryNotifier,
